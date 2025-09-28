@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Private Files — demo (HTML)</title>
+  <style>
+    :root{--bg:#f7fafc;--card:#fff;--muted:#6b7280;--accent:#2563eb}
+    *{box-sizing:border-box}
+    body{font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; margin:0; background:var(--bg); color:#111}
+    .container{max-width:920px;margin:36px auto;padding:20px}
+    .card{background:var(--card);border-radius:14px;padding:18px;box-shadow:0 6px 18px rgba(15,23,42,0.06)}
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+    h1{font-size:20px;margin:0}
+    .muted{color:var(--muted)}
+    .login-grid{display:grid;grid-template-columns:1fr 300px;gap:18px}
+    label{display:block;font-size:13px;margin-bottom:6px}
+    input{width:100%;padding:10px;border:1px solid #e6e9ef;border-radius:8px}
+    button{background:var(--accent);color:#fff;border:0;padding:10px 14px;border-radius:8px;cursor:pointer}
+    .secondary{background:#eef2ff;color:var(--accent);border:1px solid #dbeafe}
+    .file-table{width:100%;border-collapse:collapse}
+    .file-table th,.file-table td{padding:10px;border-top:1px solid #f1f5f9;text-align:left;font-size:14px}
+    .info{background:#f8fafc;border:1px solid #eef2f6;padding:12px;border-radius:8px;color:var(--muted)}
+    .topbar{display:flex;align-items:center;gap:12px}
+    .logout{background:#fff;color:var(--muted);border:1px solid #e5e7eb;padding:8px 10px;border-radius:8px}
+    .small{font-size:13px}
+    .hidden{display:none}
+    .hint{background:#fff7ed;border:1px solid #ffedd5;padding:10px;border-radius:8px;color:#92400e}
+    .row-actions{opacity:0;transform:translateY(-4px);transition:all .15s ease}
+    tr:hover .row-actions{opacity:1;transform:translateY(0)}
+    .actions button{margin-left:6px}
+    .modal-backdrop{position:fixed;inset:0;background:rgba(2,6,23,0.5);display:flex;align-items:center;justify-content:center;z-index:50}
+    .modal{background:#fff;border-radius:12px;max-width:880px;width:94%;max-height:84vh;overflow:auto;padding:18px;box-shadow:0 20px 50px rgba(2,6,23,0.4)}
+    .modal header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+    pre{white-space:pre-wrap;background:#0f172a;color:#e6eef8;padding:12px;border-radius:8px;overflow:auto}
+    @media (max-width:760px){.login-grid{grid-template-columns:1fr} header{flex-direction:column;align-items:flex-start;gap:8px}}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Private Files — demo</h1>
+      <div class="topbar">
+        <div id="userBadge" class="muted small">Nejste přihlášen</div>
+        <button id="uploadBtn" class="secondary hidden">Nahrát soubor</button>
+        <button id="logoutBtn" class="logout hidden">Odhlásit</button>
+        <input type="color" id="bgPicker" class="hidden" title="Změnit pozadí" />
+      </div>
+    </header>
+
+    <main>
+      <section id="loginSection" class="card">
+        <div class="login-grid">
+          <div>
+            <h2 style="margin-top:0">Přihlášení</h2>
+            <p class="muted small">Pouze demo účty.</p>
+            <div style="margin-top:14px">
+              <label for="username">Uživatelské jméno</label>
+              <input id="username" autocomplete="username" />
+            </div>
+            <div style="margin-top:10px">
+              <label for="password">Heslo</label>
+              <input id="password" type="password" autocomplete="current-password" />
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">
+              <button id="loginBtn">Přihlásit</button>
+              <div class="small muted">Bez registrace.</div>
+            </div>
+            <div id="loginError" class="muted small" style="margin-top:10px;color:#b91c1c;display:none"></div>
+            <div style="margin-top:14px" class="hint small">
+            </div>
+          </div>
+
+          <aside>
+            <h3 style="margin-top:0">Informace</h3>
+            <div class="info">
+              Majitel může nahrávat a mazat soubory (.txt). Každý uživatel si může upravit vizuálně pozadí stránky pro sebe.
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section id="dashSection" class="card hidden">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div>
+            <h2 id="welcome">Vítej</h2>
+            <div class="small muted" id="accountId"></div>
+          </div>
+        </div>
+
+        <section>
+          <h3 style="margin:0 0 8px 0">Soukromé soubory</h3>
+          <p class="small muted">Najdi soubor, najeď myší a zobrazí se akce: <em>Podívat se</em>, <em>Stáhnout</em> nebo <em>Smazat</em> (majitel).</p>
+          <div id="filesWrap" style="margin-top:10px"></div>
+        </section>
+      </section>
+
+      <input type="file" id="fileInput" class="hidden" accept=".txt" />
+
+      <section style="margin-top:18px" class="small muted">
+        <strong>Poznámka:</strong> Demo používá JS objekt pro data. V reálné aplikaci by se použil backend.
+      </section>
+
+      <div id="viewerModal" class="hidden" aria-hidden="true">
+        <div class="modal-backdrop">
+          <div class="modal" role="dialog" aria-modal="true">
+            <header>
+              <div>
+                <strong id="modalTitle">Náhled souboru</strong>
+                <div class="small muted" id="modalSubtitle"></div>
+              </div>
+              <div>
+                <button id="modalClose" class="secondary">Zavřít</button>
+              </div>
+            </header>
+            <div id="modalContent"></div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <script>
+    const ACCOUNTS = {
+      GoldTang: { displayName: 'GoldTang', password: 'GoldTang33', admin: true, files: [] },
+      moonikoneytb: { displayName: 'Moonikoneytb', password: 'Moonik123', admin: false, files: [] }
+    };
+
+    const loginSection=document.getElementById('loginSection');
+    const dashSection=document.getElementById('dashSection');
+    const userBadge=document.getElementById('userBadge');
+    const logoutBtn=document.getElementById('logoutBtn');
+    const uploadBtn=document.getElementById('uploadBtn');
+    const fileInput=document.getElementById('fileInput');
+    const loginBtn=document.getElementById('loginBtn');
+    const loginError=document.getElementById('loginError');
+    const usernameEl=document.getElementById('username');
+    const passwordEl=document.getElementById('password');
+    const welcomeEl=document.getElementById('welcome');
+    const accountIdEl=document.getElementById('accountId');
+    const filesWrap=document.getElementById('filesWrap');
+    const viewerModal=document.getElementById('viewerModal');
+    const modalTitle=document.getElementById('modalTitle');
+    const modalSubtitle=document.getElementById('modalSubtitle');
+    const modalContent=document.getElementById('modalContent');
+    const modalClose=document.getElementById('modalClose');
+    const bgPicker=document.getElementById('bgPicker');
+
+    let session = null;
+
+    function isTextFile(name){ return /\.txt$/i.test(name); }
+
+    function render(){
+      if(!session){
+        loginSection.classList.remove('hidden');
+        dashSection.classList.add('hidden');
+        logoutBtn.classList.add('hidden');
+        uploadBtn.classList.add('hidden');
+        bgPicker.classList.add('hidden');
+        userBadge.textContent='Nejste přihlášen';
+        return;
+      }
+      loginSection.classList.add('hidden');
+      dashSection.classList.remove('hidden');
+      logoutBtn.classList.remove('hidden');
+      userBadge.textContent=session.displayName;
+      welcomeEl.textContent=`Vítej, ${session.displayName}`;
+      accountIdEl.textContent=`Účet: ${session.username}`;
+
+      if(session.admin){
+        uploadBtn.classList.remove('hidden');
+      } else {
+        uploadBtn.classList.add('hidden');
+      }
+
+      bgPicker.classList.remove('hidden');
+      bgPicker.value=session.bg || '#f7fafc';
+      document.body.style.background=session.bg || '#f7fafc';
+
+      const files=ACCOUNTS[session.username].files;
+      if(files.length===0){
+        filesWrap.innerHTML='<div class="card">Žádné soubory.</div>';
+        return;
+      }
+      let html='<div class="card"><table class="file-table"><thead><tr><th>Název</th><th>Velikost</th><th>Vytvořeno</th><th></th></tr></thead><tbody>';
+      for(const f of files){
+        const viewBtn=isTextFile(f.name)?`<button data-id="${f.id}" class="viewBtn secondary">Podívat se</button>`:`<button disabled class="secondary">Podívat se</button>`;
+        const delBtn=(session.username==='GoldTang')?`<button data-id="${f.id}" class="delBtn secondary">Smazat</button>`:'';
+        html+=`<tr><td>${f.name}</td><td>${f.size}</td><td>${f.created}</td><td class="row-actions actions">${viewBtn}<button data-id="${f.id}" class="dlBtn secondary">Stáhnout</button>${delBtn}</td></tr>`;
+      }
+      html+='</tbody></table></div>';
+      filesWrap.innerHTML=html;
+
+      filesWrap.querySelectorAll('.dlBtn').forEach(btn=>btn.addEventListener('click',()=>{
+        const id=btn.getAttribute('data-id');
+        const file=files.find(x=>x.id===id);
+        downloadFile(file);
+      }));
+      filesWrap.querySelectorAll('.viewBtn').forEach(btn=>btn.addEventListener('click',()=>{
+        const id=btn.getAttribute('data-id');
+        const file=files.find(x=>x.id===id);
+        if(isTextFile(file.name)) openViewer(file);
+      }));
+      filesWrap.querySelectorAll('.delBtn').forEach(btn=>btn.addEventListener('click',()=>{
+        const id=btn.getAttribute('data-id');
+        const index=files.findIndex(x=>x.id===id);
+        if(index>=0){
+          files.splice(index,1);
+          render();
+        }
+      }));
+    }
+
+    function downloadFile(file){
+      const blob=new Blob([file.content],{type:'application/octet-stream'});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a'); a.href=url; a.download=file.name; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    }
+
+    function openViewer(file){
+      modalTitle.textContent=file.name;
+      modalSubtitle.textContent=`Velikost: ${file.size} • Vytvořeno: ${file.created}`;
+      modalContent.innerHTML='';
+      const pre=document.createElement('pre');
+      pre.textContent=file.content;
+      modalContent.appendChild(pre);
+      viewerModal.classList.remove('hidden');
+    }
+
+    modalClose.addEventListener('click',()=>viewerModal.classList.add('hidden'));
+
+    loginBtn.addEventListener('click',()=>{
+      const u=usernameEl.value.trim();
+      const p=passwordEl.value;
+      const acct=ACCOUNTS[u];
+      if(!acct||acct.password!==p){ loginError.textContent='Neplatné přihlašovací údaje.'; loginError.style.display='block'; return; }
+      loginError.style.display='none';
+      session={username:u, displayName:acct.displayName, admin:acct.admin, bg:acct.bg||'#f7fafc'};
+      render();
+    });
+
+    logoutBtn.addEventListener('click',()=>{ session=null; render(); });
+
+    uploadBtn.addEventListener('click',()=>fileInput.click());
+    fileInput.addEventListener('change',()=>{
+      if(!session || !session.admin) return;
+      const file=fileInput.files[0]; if(!file) return;
+      if(!isTextFile(file.name)) { alert('Pouze .txt soubory!'); return; }
+      const reader=new FileReader();
+      reader.onload=e=>{
+        const content=e.target.result;
+        ACCOUNTS[session.username].files.push({id:Date.now()+'', name:file.name, size:(file.size/1024).toFixed(1)+' KB', created:new Date().toISOString().split('T')[0], content});
+        render();
+      };
+      reader.readAsText(file);
+    });
+
+    bgPicker.addEventListener('input',(e)=>{
+      if(!session) return;
+      session.bg=e.target.value;
+      document.body.style.background=e.target.value;
+      ACCOUNTS[session.username].bg=e.target.value;
+    });
+
+    render();
+  </script>
+</body>
+</html>
